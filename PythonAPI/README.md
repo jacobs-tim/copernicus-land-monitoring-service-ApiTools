@@ -1,11 +1,18 @@
 # Python client for accessing the Copernicus Land Monitoring Service HTTP API
 
-Python client for accessing the Copernicus Land Monitoring Service HTTP API on WEkEO by means of REST calls. Currenty supported (on server side) are only Data from the [High Resolution Snow and Ice Monitoring](https://land.copernicus.eu/pan-european/biophysical-parameters/high-resolution-snow-and-ice-monitoring).
+Python client for accessing the Copernicus Land Monitoring Service HTTP API on WEkEO by means of REST calls. 
+Currenty supported (on server side) are only products from the 
+[High Resolution Snow and Ice Monitoring](https://land.copernicus.eu/pan-european/biophysical-parameters/high-resolution-snow-and-ice-monitoring)
+and
+[High Resolution Vegetation Phenology and Productivity](https://land.copernicus.eu/pan-european/biophysical-parameters/high-resolution-vegetation-phenology-and-productivity)
+
 
 ## Registration:
-Before downloading any data you need to register [here](https://cryo.land.copernicus.eu/finder).  
+Before downloading any data you need to register 
+[here](https://cryo.land.copernicus.eu/finder) for HR Snow and Ice (HR-SI)
+[here](https://www.terrascope.be/en) for HR Vegetation Phenology and Productivity (HR-VPP)
 
-## Other Data access possibilities:
+## Other access possibilities for HR-Snow and Ice:
 Web frontend for seach and download: https://cryo.land.copernicus.eu/finder  
 WMS webfrontend data viewer: https://cryo.land.copernicus.eu/browser  
 WMS services:  
@@ -13,10 +20,15 @@ WMS services:
 •	https://cryo.land.copernicus.eu/wms/RLIE/  
 •	https://cryo.land.copernicus.eu/wms/PSA/  
 
-## API Url: 
-https://cryo.land.copernicus.eu/resto/api/collections/HRSI/search.json
-## API reference: 
-https://cryo.land.copernicus.eu/resto/api/collections/HRSI/describe.xml
+## Other access possibilities for HR-Vegetation Phenology and Productivity:
+
+## OpenSearch API reference: 
+https://phenology.hrvpp.vgt.vito.be/description
+
+## Web map viewing:
+https://phenology.hrvpp.vgt.vito.be/wmts?request=GetCapabilities
+## or on wekeo.eu portal by May 2021
+
 
 ## Installation:
 Download the script and run (use correct path):
