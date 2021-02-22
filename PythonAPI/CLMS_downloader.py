@@ -677,13 +677,18 @@ class HRVPPRequest(object):
                 'features[%d][\'properties\'][\'%s\'] entry is missing from the JSON contents:\n%s' %
                 (feature_index, json_param, json.dumps(json_root, indent=4)))
 
+    # Example request:
+    # curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=$USER" -d "password=$PASSWORD" -d "grant_type=password" -d "client_id=oscars-download" -d "client_secret=e5c2a18d-1691-4dff-9204-fe3d10b2f4cc" "https://sso.vgt.vito.be/auth/realms/terrascope/protocol/openid-connect/token"
+
     def __get_token__(self, credentials):
-        command = ['curl -s -d "client_id=PUBLIC"']
+        command = ['curl -s -X POST -H "Content-Type: application/x-www-form-urlencoded"']
         command.append('-d "username=%s"'%credentials[0])
         command.append('-d "password=%s"'%credentials[1])
         command.append('-d "grant_type=password"')
+        command.append('-d "client_id=oscars-download"')
+        command.append('-d "client_secret=e5c2a18d-1691-4dff-9204-fe3d10b2f4cc"')
         command.append('"https://sso.vgt.vito.be/auth/realms/terrascope/protocol/openid-connect/token"')
-        logging.info("GET TOKEN: " + " ".join(command))
+        logging.debug("Curl command to receive token: " + " ".join(command))
         out = eval(subprocess.check_output(" ".join(command), shell=True))
         if 'error' in out:
            logging.error("Following error occured when getting the token: {}".format(out))
@@ -709,14 +714,20 @@ class HRVPPRequest(object):
             raise
             sys.exit(-2)
 
+        logging.info("Retrieving security token")
+
+        # get security token
+        myToken = self.__get_token__(credentials)
 
         # Check that the result file was set before the call
         if self.result_file is None:
             logging.error("No result_file was provided")
             sys.exit(-2)
+
         #====================
         # read result_file
         #====================
+        logging.info("Reading list of files to download in result_file")
         try:
             with open(self.result_file) as f:
                 content = f.readlines()
@@ -725,6 +736,14 @@ class HRVPPRequest(object):
             logging.error("Error while parsing result_file file: " + str(self.result_file))
             raise
             sys.exit(-2)
+
+        # warn about downloading large numbers of files
+        max_files=200
+        if len(product_list) > max_files:
+            logging.warn("Downloading more than "+str(max_files)+" files. This can be slow and take up a significant amount of disk space.")
+        
+        logging.info("Download starts")
+
         # loop to download all products within the list
         for info_product in product_list:
             start_time = time.time()
@@ -734,17 +753,20 @@ class HRVPPRequest(object):
                 try:
                     # first info must be product url (mandatory)
                     product_url = info_product[0]
-                    adress = self.__hrvpp_adress__(product_url, credentials)
+                    #adress = self.__hrvpp_adress__(product_url, credentials)
+                    # token is not passed as URL parameter, but rather through HTTP request header
+                    adress = product_url
 
                     # second info is product name (optional)
                     dl_filename = None
                     if len(info_product) >= 2:
-                        dl_filename = '%s.zip'%(info_product[1].split('/')[-1])
+                        dl_filename = '%s'%(info_product[1].split('/')[-1])
 
                     # start actual download
-                    hrvpp_filepath = self.download_with_curl(adress, dl_filename)
+                    hrvpp_filepath = self.download_with_curl(adress, dl_filename, header_token=myToken)
                     logging.info('Product successfully downloaded at %s (in %s seconds)'\
-                                    %(hrsi_filepath, (time.time()-start_time)))
+                                    %(hrvpp_filepath, (time.time()-start_time)))
+                    time.sleep(0.5)
                     break
                 except:
                     ntries += 1
@@ -754,19 +776,30 @@ class HRVPPRequest(object):
                         time.sleep(5.*ntries)
                         logging.info('  - try #%d failed, retrying...'%ntries)
 
-    def download_with_curl(self, product_url, dl_filename=None):
-        # parse header to read remote filename
-        if dl_filename is None:
-            import re
-            headers = str(subprocess.check_output('curl -sI %s'%(product_url), shell=True))
-            dl_filename = re.findall("filename=(\S+)",str(headers))[0].split('\\r')[0]
-            assert dl_filename.endswith('.tif')
+    def download_with_curl(self, product_url, dl_filename=None, header_token=None):
+        # parse header to read remote filename -> handled by curl's -J options
+        #if dl_filename is None:
+        #    import re
+        #    headers = str(subprocess.check_output('curl -sI %s'%(product_url), shell=True))
+        #    dl_filename = re.findall("filename=(\S+)",str(headers))[0].split('\\r')[0]
+        #    assert dl_filename.endswith('.tif')
         # download the product in outputPath
-        logging.info(dl_filename + " " + product_url.split("?token")[0])
+        logging.info('Retrieving '+dl_filename)
+
         hrvpp_filepath = os.path.join(self.outputPath, dl_filename)
+        product_url = product_url.replace('https://phenology.hrvpp.vgt.vito.be','http://oscars-download-1.hrvpp.vgt.vito.be')
+
+        DL_cmd = ["curl","--retry 3","-f -s -# -J -O"]
+        if header_token:
+            DL_cmd.append('-H "Authorization: Bearer '+header_token+'"')
+        DL_cmd.append(product_url)
+        DL_cmd = " ".join(DL_cmd)
+
         logging.debug('DL filepath: ' + hrvpp_filepath)
-        subprocess.check_call('curl %s -o %s -s'%(product_url, hrvpp_filepath), shell=True)
-        logging.debug('DL command: ' + 'curl %s -o %s -s'%(product_url, hrvpp_filepath))
+        logging.debug('DL product_url: ' + product_url)
+        logging.debug('DL command: ' + DL_cmd)
+        #subprocess.check_call('curl %s -o %s -s'%(product_url, hrvpp_filepath), shell=True)
+        subprocess.check_call(DL_cmd, shell=True)
         return hrvpp_filepath
 
 
@@ -864,10 +897,10 @@ def main():
 
     # Switch actual result download (if enable)
     if args.query_and_download or args.download:
+        logging.info("Start download mode")
         myRequest.set_credential(args.credentials)
-        logging.info("Start downloading...")
         myRequest.download();
-        logging.info("Downloading complete!")
+        logging.info("Download complete!")
     else:
         logging.info("No products were downloaded.")
 
