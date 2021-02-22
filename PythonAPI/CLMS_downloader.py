@@ -446,6 +446,9 @@ class HRVPPRequest(object):
     # URL parameter : result page index.
     URL_PARAM_PAGE_INDEX = 'startPage'
 
+    # URL parameter to filter on Sentinel-2 tile
+    URL_PARAM_TILE = 'tileId'
+
     # Static URL parameters.
     # count: request at most n products per page.
     # sortKeys: results are sorted by product identifier
@@ -491,7 +494,7 @@ class HRVPPRequest(object):
         '''
         Build the request to access HR-VPP catalogue.
         :param collection: product collection identifier
-        :param productIdentifier: text to search in productIdentifier, as string.
+        :param productIdentifier: productIdentifier, as string.
         :param productType: product type, as string.
         :param obsDateMin: Min request date, as a datetime object.
         :param obsDateMax: Max request date, as a datetime object.
@@ -508,8 +511,14 @@ class HRVPPRequest(object):
         url_params[HRVPPRequest.URL_PARAM_COLLECTION] = collection
         
         if productIdentifier:
-            url_params[HRVPPRequest.URL_PARAM_PRODUCT_IDENTIFIER] = (
-                productIdentifier )
+            if len(productIdentifier)==6 and productIdentifier.upper()[0]=='T':
+                url_params[HRVPPRequest.URL_PARAM_TILE] = productIdentifier[1:]
+            elif len(productIdentifier)==5:
+                url_params[HRVPPRequest.URL_PARAM_TILE] = productIdentifier
+            else:
+                url_params[HRVPPRequest.URL_PARAM_PRODUCT_IDENTIFIER] = (
+                    productIdentifier )
+
         if productType:
             url_params[HRVPPRequest.URL_PARAM_PRODUCT_TYPE] = productType
         
@@ -783,7 +792,7 @@ def main():
     # Parameters used to define a query, to use a query generated through the HR-S&I finder or to build a new one
     group_query = parser.add_argument_group("query_params", "mandatory parameters for query and query_and_download modes")
     group_query.add_argument("-queryURL", type=str, help="Catalogue search query, that may be copied from portal. If no query is provided, other query_params are used to build one from scratch.")
-    group_query.add_argument("-productIdentifier", type=str, help="\"FSC_20170913T114531_S2B_T29UNV_V001_0\" or \"VI_20191220T115511_S2A_T29UNU-010m_V100_NDVI\". Can be abbreviated for HR Snow&Ice products.")
+    group_query.add_argument("-productIdentifier", type=str, help="\"T32TLR\" or \"FSC_20170913T114531_S2B_T29UNV_V001_0\" or \"VI_20191220T115511_S2A_T29UNU-010m_V100_NDVI\".")
     group_query.add_argument("-productType", type=str, help="One of FSC|RLIE|PSA|PSA_LAEA|ARLIE for HRSI, one of 20 parameters (NDVI, LAI, PPI, SOSD, EODS, etc) for HRVPP")
     group_query.add_argument("-obsDateMin", type=str, help="2020-06-02T00:00:00Z")
     group_query.add_argument("-obsDateMax", type=str, help="2020-06-02T00:00:00Z")
