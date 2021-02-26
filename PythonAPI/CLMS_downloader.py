@@ -414,8 +414,7 @@ class HRVPPRequest(object):
     '''
 
     # Request URL root
-    #URL_ROOT = 'https://phenology.hrvpp.vgt.vito.be/products'
-    URL_ROOT = 'http://oscars-1.hrvpp.vgt.vito.be:8080/products'
+    URL_ROOT = 'http://phenology.hrvpp.vgt.vito.be/products'
     
     URL_PARAM_COLLECTION='collection'
 
@@ -787,7 +786,6 @@ class HRVPPRequest(object):
         logging.info('Retrieving '+dl_filename)
 
         hrvpp_filepath = os.path.join(self.outputPath, dl_filename)
-        product_url = product_url.replace('https://phenology.hrvpp.vgt.vito.be','http://oscars-download-1.hrvpp.vgt.vito.be')
 
         DL_cmd = ["curl","--retry 3","-f -s -# -J -O"]
         if header_token:
